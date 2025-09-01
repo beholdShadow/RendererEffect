@@ -177,7 +177,7 @@ local Shader = {
         vec4 FragColor = vec4(cc.rgb, _Color1.a);
         float alpha = 1.0;
         //#ifdef ENABLE_DERIVATIVES
-            //float smoothing = 1.5 * fwidth(outlineDist);
+            //float smoothing = 1.5 * fwidth(fillDist);
         //#else
             float smoothing = 2.0 / uPixelScale * uSmooth;
         //#endif
@@ -212,6 +212,7 @@ local Shader = {
         alpha *= FragColor.a;
     
         gl_FragColor = vec4(FragColor.rgb * alpha, alpha);// * vColor.a);
+        //gl_FragColor = vec4(FragColor.rgb * alpha + vec3(fillDist) * (1.0 - alpha), fillDist);
     }
     ]],
 
