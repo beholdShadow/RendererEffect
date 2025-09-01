@@ -8,20 +8,27 @@ function MeshRender:_init()
         attribute vec4 aPosition;
         attribute vec4 aTextureCoord;
         attribute vec4 aColor;
+        attribute vec4 aOutlineColor;
         varying vec2 vTexCoord;
+        varying vec4 vColor;
+        varying vec4 vOutlineColor;
         void main()
         {
             gl_Position = uMVP * aPosition;
             vTexCoord = aTextureCoord.xy;
+            vColor = aColor;
+            vOutlineColor = aOutlineColor;
         }
         ]]
     self.fs = [[
         precision mediump float;
         uniform vec4 uColor;
         varying vec2 vTexCoord;
+        varying vec4 vColor;
+        varying vec4 vOutlineColor;
         void main()
         {
-            gl_FragColor = uColor + vec4(vTexCoord, 1.0, 1.0);
+            gl_FragColor = vColor + vec4(vTexCoord, 1.0, 1.0);
         }
         ]]
     self.context = nil
@@ -31,6 +38,7 @@ function MeshRender:_init()
     self.uv1Vbo = nil
     self.uv1Enabeld = false
     self.colorVbo = nil
+    self.outlineColorVbo = nil
     self.ibo = nil
     self.indicesCount = 0
 end
@@ -55,6 +63,11 @@ function MeshRender:init(context)
     colorArr:copyFromTable(colorData)
     self.colorVbo = context:createVertexBuffer(colorArr, DYNAMIC_DRAW)
 
+    local outlineColorData = { 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0 }
+    local outlineColorArr = FloatArray.new(#outlineColorData)
+    outlineColorArr:copyFromTable(outlineColorData)
+    self.outlineColorVbo = context:createVertexBuffer(outlineColorArr, DYNAMIC_DRAW)
+
     local indicesData = { 0, 2, 1, 0, 3, 2 }
     local data = Uint16Array.new(#indicesData)
     data:copyFromTable(indicesData)
@@ -68,6 +81,7 @@ function MeshRender:teardown(context)
     if self.uv0Vbo then context:destroyBuffer(self.uv0Vbo) end
     if self.uv1Vbo then context:destroyBuffer(self.uv1Vbo) end
     if self.colorVbo then context:destroyBuffer(self.colorVbo) end
+    if self.outlineColorVbo then context:destroyBuffer(self.outlineColorVbo) end
     if self.ibo then context:destroyBuffer(self.ibo) end
 end
 
@@ -112,6 +126,16 @@ function MeshRender:updateColors(data)
     end
 end
 
+function MeshRender:updateOutlineColors(data)
+    local FLOAT_SIZE = FloatArray.byteSizeOfFloat()
+    if data:size() > self.outlineColorVbo:size() / FLOAT_SIZE then
+        if self.outlineColorVbo then self.context:destroyBuffer(self.outlineColorVbo) end
+        self.outlineColorVbo = self.context:createVertexBuffer(data, DYNAMIC_DRAW)
+    else
+        self.outlineColorVbo:updateFloatArray(0, data)
+    end
+end
+
 function MeshRender:updateIndexBuffer(data)
     local UINT16_SIZE = Uint16Array.byteSizeOfUint16()
     if data:size() > self.ibo:size() / UINT16_SIZE then
@@ -144,12 +168,20 @@ function MeshRender:draw(pass)
     self.colorVbo:bind()
     pass:setVertexAttrib("aColor", 4, FLOAT, false, 4 * FLOAT_SIZE, 0)
 
+    self.outlineColorVbo:bind()
+    pass:setVertexAttrib("aOutlineColor", 4, FLOAT, false, 4 * FLOAT_SIZE, 0)
+
     self.ibo:bind()
     pass:drawElements(TRIANGLES, self.indicesCount, UNSIGNED_SHORT, 0)
 
     self.ibo:unbind()
     pass:disableVertexAttrib("aPosition")
     pass:disableVertexAttrib("aTextureCoord")
+    if self.uv1Enabeld then
+        pass:disableVertexAttrib("aTextureCoord1")
+    end
+    pass:disableVertexAttrib("aColor")
+    pass:disableVertexAttrib("aOutlineColor")
 end
 
 return MeshRender

@@ -89,7 +89,8 @@ local Shader = {
     uniform vec4 _Color1;
     
     varying vec4 vColor;
-
+    varying vec4 vOutlineColor;
+    
     float linearstep(float edge0, float edge1, float x) {
         float t = (x - edge0) / (edge1 - edge0);
         return clamp(t, 0.0, 1.0);
@@ -98,11 +99,12 @@ local Shader = {
     void main()
     {
         float distance = texture2D(uTexture0, vTexCoord).a;
+        vec4 color = _Color1 * vColor;
         float smoothing = 2.0 / uPixelScale * uSmooth;
         float v1 = clamp(_Padding + _Scale - smoothing, 0.001, 0.999);
         float v2 = clamp(_Padding + 1.0 - _Scale + smoothing, 0.001, 0.999);
         float alpha = clamp(linearstep(v1, v2, distance), 0.0, 1.0);
-        gl_FragColor = vec4(_Color1.rgb * alpha * _Color1.a, alpha * _Color1.a);
+        gl_FragColor = vec4(color.rgb * alpha * color.a, alpha * color.a);
     }
     ]],
     
@@ -113,12 +115,13 @@ local Shader = {
     attribute vec4 aTextureCoord;
     attribute vec4 aTextureCoord1;
     attribute vec4 aColor;
+    attribute vec4 aOutlineColor;
     varying vec2 vTexCoord;
     #ifdef TEXTURE
         varying vec2 vTexCoord1;
     #endif
     varying vec4 vColor;
-    
+    varying vec4 vOutlineColor;
     void main()
     {
         gl_Position = uMVP * aPosition;
@@ -127,6 +130,7 @@ local Shader = {
         vTexCoord1 = aTextureCoord1.xy;
     #endif
         vColor = aColor;
+        vOutlineColor = aOutlineColor;
     }
     ]], 
 
@@ -139,6 +143,7 @@ local Shader = {
         varying vec2 vTexCoord1;
     #endif
     varying vec4 vColor;
+    varying vec4 vOutlineColor;
     uniform sampler2D uTexture0;
     uniform float uPixelScale;
     uniform float uSmooth;
@@ -171,10 +176,10 @@ local Shader = {
         vec4 cc = _Color1 * vColor;
     #ifdef TEXTURE
         vec4 diff = texture2D(_Diffuse, vTexCoord1);
-        cc = cc * (1.0 - diff.a) + diff * diff.a;
+        cc.rgb = cc.rgb * (1.0 - diff.a) + diff.rgb * diff.a;
     #endif
         
-        vec4 FragColor = vec4(cc.rgb, _Color1.a);
+        vec4 FragColor = vec4(cc.rgb, cc.a);
         float alpha = 1.0;
         //#ifdef ENABLE_DERIVATIVES
             //float smoothing = 1.5 * fwidth(fillDist);
@@ -186,7 +191,7 @@ local Shader = {
             alpha = smoothstep(l, _Scale + smoothing, fillDist); 
         float outlineDist = fillDist;
     #ifdef OUTLINE1
-        cc = _Outline1Color1;
+        cc = _Outline1Color1 * vOutlineColor;
         FragColor = mix(cc, FragColor, alpha);
         #ifdef OPTIMIZE_OUTLINE
             outlineDist = texture2D(uTexture0, vTexCoord).r;

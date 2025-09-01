@@ -84,7 +84,7 @@
                 "AnchorType": 0,
                 "EnterAnim": 0,
                 "ExitAnim": 0,
-                "LoopAnim": 12
+                "LoopAnim": 0
             },
             "paramres": {
                 "Texture": {

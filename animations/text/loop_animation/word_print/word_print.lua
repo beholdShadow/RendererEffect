@@ -7,10 +7,11 @@ local WordPrint = {
 
 function WordPrint:init(filter) 
     self.colorArr = {}
-    table.insert(self.colorArr,  Vec4f.new(42.0 / 255, 185.0 / 255, 87.0 / 255, 1.0)) --GREEN
-    table.insert(self.colorArr,  Vec4f.new(236.0 / 255, 190.0 / 255, 0.0 / 255, 1.0)) -- YELLOW
-    table.insert(self.colorArr,  Vec4f.new(255.0 / 255, 48.0 / 255, 53.0 / 255, 1.0)) --RED
-    table.insert(self.colorArr,  Vec4f.new(1.0, 1.0, 1.0, 1.0)) --white
+    -- table.insert(self.colorArr,  Vec4f.new(42.0 / 255, 185.0 / 255, 87.0 / 255, 1.0)) --GREEN
+    table.insert(self.colorArr,  {color = Vec4f.new(1.0, 1.0, 85 / 255, 1.0), outlineColor = Vec4f.new(1.0, 1.0, 1.0, 0.0)}) -- YELLOW
+    table.insert(self.colorArr,  {color = Vec4f.new(0.9, 0.2, 0.17, 1.0), outlineColor = Vec4f.new(1.0, 1.0, 1.0, 0.0)}) --RED
+    table.insert(self.colorArr,  {color = Vec4f.new(1.0, 1.0, 1.0, 1.0), outlineColor = Vec4f.new(1.0, 1.0, 1.0, 0.0)}) --white
+    table.insert(self.colorArr,  {color = Vec4f.new(1.0, 1.0, 1.0, 0.0), outlineColor = Vec4f.new(1.0, 1.0, 1.0, 1.0)})
     self.index = math.random(1, #self.colorArr)
     self.color = self.colorArr[index]
 end
@@ -144,10 +145,32 @@ function WordPrint:apply(filter)
                 for j = 1, 8 do
                     char.pos[j] = charBackup.pos[j]
                 end
-                char.gradientColor = {charColor.x, charColor.y, charColor.z, charColor.w, 
-                                        charColor.x, charColor.y, charColor.z, charColor.w, 
-                                        charColor.x, charColor.y, charColor.z, charColor.w, 
-                                        charColor.x, charColor.y, charColor.z, charColor.w}
+                
+                -- Calculate alpha fade-in effect for each word
+                local wordBeginTime = self.charJumpData[i].begin_time
+                local wordEndTime = self.charJumpData[i].end_time
+                local wordDuration = wordEndTime - wordBeginTime
+                local fadeInDuration = wordDuration * 0.8-- 30% of word duration or max 200ms for fade-in
+                local currentTime = self.timestamp - wordBeginTime
+                
+                local alpha = 1.0
+                if currentTime < fadeInDuration then
+                    -- Alpha gradually increases from 0 to 1 during fade-in period
+                    alpha = self:smoothstep(0, fadeInDuration, currentTime)
+                end
+                
+                -- Apply alpha to character color
+                local fadeColor = Vec4f.new(charColor.color.x, charColor.color.y, charColor.color.z, charColor.color.w * alpha)
+                local fadeOutlineColor = Vec4f.new(charColor.outlineColor.x, charColor.outlineColor.y, charColor.outlineColor.z, charColor.outlineColor.w * alpha)
+                char.gradientColor = {fadeColor.x, fadeColor.y, fadeColor.z, fadeColor.w, 
+                                        fadeColor.x, fadeColor.y, fadeColor.z, fadeColor.w, 
+                                        fadeColor.x, fadeColor.y, fadeColor.z, fadeColor.w, 
+                                        fadeColor.x, fadeColor.y, fadeColor.z, fadeColor.w}
+    
+                char.outlineColor = {fadeOutlineColor.x, fadeOutlineColor.y, fadeOutlineColor.z, fadeOutlineColor.w, 
+                                        fadeOutlineColor.x, fadeOutlineColor.y, fadeOutlineColor.z, fadeOutlineColor.w, 
+                                        fadeOutlineColor.x, fadeOutlineColor.y, fadeOutlineColor.z, fadeOutlineColor.w, 
+                                        fadeOutlineColor.x, fadeOutlineColor.y, fadeOutlineColor.z, fadeOutlineColor.w}
             else
                 char.pos = { 0,0, 0,0, 0,0, 0,0, 0,0, 0,0, 0,0, 0,0 }
             end

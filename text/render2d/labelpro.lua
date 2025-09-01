@@ -585,6 +585,7 @@ function LabelPro:generateChars(context, text, lineInfo)
                     char.uv = { left, top, right, top, right, bottom, left, bottom }
                     char.uv1 = { left, top, right, top, right, bottom, left, bottom }
                     char.gradientColor = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0}
+                    char.outlineColor =  {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0}
                     if self.sdfStyle.textureEnabled and self.sdfStyle.textureGL then
                         local glyphWidth, glyphHeight = glyph.width + 2 * d, glyph.height + 2 * d
                         glyphWidth = self.sdfStyle.textureScale * glyphWidth
@@ -656,7 +657,7 @@ function LabelPro:generateMeshBatch(context)
             table.insert(self.textMeshBatch, {
                 textureId = ofTex.textureID, textureFormat = ofTex.format,
                 textureWidth = ofTex.width, textureHeight = ofTex.height,
-                pos = {}, uv = {}, uv1 = {}, color = {}, indices = {} })
+                pos = {}, uv = {}, uv1 = {}, color = {}, outlineColor = {}, indices = {} })
             foundIdx = #self.textMeshBatch
         end
 
@@ -671,6 +672,10 @@ function LabelPro:generateMeshBatch(context)
             table.insert(self.textMeshBatch[foundIdx].color, char.gradientColor[4*n+2])
             table.insert(self.textMeshBatch[foundIdx].color, char.gradientColor[4*n+3])
             table.insert(self.textMeshBatch[foundIdx].color, char.gradientColor[4*n+4])
+            table.insert(self.textMeshBatch[foundIdx].outlineColor, char.outlineColor[4*n+1])
+            table.insert(self.textMeshBatch[foundIdx].outlineColor, char.outlineColor[4*n+2])
+            table.insert(self.textMeshBatch[foundIdx].outlineColor, char.outlineColor[4*n+3])
+            table.insert(self.textMeshBatch[foundIdx].outlineColor, char.outlineColor[4*n+4])
         end
 
         local glyphCount = #self.textMeshBatch[foundIdx].pos / 8 - 1
@@ -686,17 +691,20 @@ function LabelPro:generateMeshBatch(context)
     for i = 1, #self.textMeshBatch do
         local posCnt = #self.textMeshBatch[i].pos
         local colorCnt = #self.textMeshBatch[i].color
+        local outlineColorCnt = #self.textMeshBatch[i].outlineColor
         local indicesCnt = #self.textMeshBatch[i].indices
         local mesh2dPosition = FloatArray.new(posCnt)
         local mesh2dTexCoord0 = FloatArray.new(posCnt)
         local mesh2dTexCoord1 = FloatArray.new(posCnt)
         local mesh2dColor = FloatArray.new(colorCnt)
+        local mesh2dOutlineColor = FloatArray.new(outlineColorCnt)
         local mesh2dIndices = Uint16Array.new(indicesCnt)
 
         mesh2dPosition:copyFromTable(self.textMeshBatch[i].pos)
         mesh2dTexCoord0:copyFromTable(self.textMeshBatch[i].uv)
         mesh2dTexCoord1:copyFromTable(self.textMeshBatch[i].uv1)
         mesh2dColor:copyFromTable(self.textMeshBatch[i].color)
+        mesh2dOutlineColor:copyFromTable(self.textMeshBatch[i].outlineColor)
         mesh2dIndices:copyFromTable(self.textMeshBatch[i].indices)
 
         self.textMeshBatch[i].mesh2dRender = MeshRender()
@@ -705,6 +713,7 @@ function LabelPro:generateMeshBatch(context)
         self.textMeshBatch[i].mesh2dRender:updateTextureCoords0(mesh2dTexCoord0)
         self.textMeshBatch[i].mesh2dRender:updateTextureCoords1(mesh2dTexCoord1)
         self.textMeshBatch[i].mesh2dRender:updateColors(mesh2dColor)
+        self.textMeshBatch[i].mesh2dRender:updateOutlineColors(mesh2dOutlineColor)
         self.textMeshBatch[i].mesh2dRender:updateIndexBuffer(mesh2dIndices)
     end
 
