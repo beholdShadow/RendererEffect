@@ -2,20 +2,21 @@
 --   2021/04/20 : Optimize.
 --   2021/09/17 : add renderToRT in animation.
 --   2021/09/27 : fix video texture reuse bug
-
+--   2022/09/19 : fix internal crop bug
 TAG = "OrangeFilter-Video"
 OF_LOGI(TAG, "Call Video lua script!")
 local EffectList = require "sub.effectlist"
-local Animation = require "sub.animation"
-local MaskRender = require "common.mask"
+local AnimationMgr = require "sub.animation"
+local CropRender = require "sub.crop"
+local MotionBlurRender = require "common.motion_blur"
+local DynamicCollage = require "common.dynamic_collage"
 local TextureRender = require "common.texture"
-local BlendRender = require "common.blend"
 
 local Filter = {
     name = "video",
     
 	imageTex = nil,
-	maskTex = nil,
+	bgTexOF = nil,
 	duration = 10,
 	context = nil,
 	params = {
@@ -25,18 +26,26 @@ local Filter = {
 		fourCornerMat = Matrix4f.new(),
 		rotX = 0, rotY = 0,
 		opacity = 100,
+		color = nil
 		},
 	fSetParamsByMsg = false,
 
-	animation = Animation,
+	animation = AnimationMgr,
 	
+	motionBlur = false,
+
 	timestamp = 0,
-	debug = 0.0
+	debug = 0.0,
+	
+	camera3D = {
+		enable = false,
+		zPos = 0
+	}
 }
 
 function Filter:initParams(context, filter)
 	OF_LOGI(TAG, "call initParams")
-	filter:insertBoolParam("Camera", true)
+	filter:insertBoolParam("Camera3D", true)
 
 	filter:insertFloatParam("TransX", -10000, 10000, 0)
 	filter:insertFloatParam("TransY", -10000, 10000, 0)
@@ -52,18 +61,25 @@ function Filter:initParams(context, filter)
 	end
     filter:insertIntParam("Opacity", 0, 100, 100)
 
-	TextureRender:initParams(context, filter)
-	BlendRender:initParams(context, filter)
-	MaskRender:initParams(context, filter)
+    filter:insertBoolParam("MotionBlur", false)
 	
-	EffectList:initParams(context, filter)
-	Animation:initParams(context, filter)
+	DynamicCollage:initParams(context, filter)
+
+	TextureRender:initParams(context, filter)
+	
+	AnimationMgr:initParams(context, filter)
+
+	CropRender:initParams(context, filter)
 
 	filter:insertFloatParam("debug", 0, 0.2, 0)
+
+
+	EffectList:initParams(context, filter)
+
 	return OF_Result_Success
 end
 
-function Filter:onApplyParams(context, filter)
+function Filter:onApplyParams(context, filter, dirtyTable)
 	OF_LOGI(TAG, "call onApplyParams")
 	if self.fSetParamsByMsg == false then
 		self.params.tx = filter:floatParam("TransX")
@@ -71,9 +87,10 @@ function Filter:onApplyParams(context, filter)
 		self.params.rot = filter:floatParam("Rotate") * math.pi / 180
 		self.params.rotX = filter:floatParam("RotateX") * math.pi / 180
 		self.params.rotY = filter:floatParam("RotateY") * math.pi / 180
-		self.params.scale = filter:floatParam("Scale")
-		self.params.scaleX = filter:floatParam("ScaleX")
-		self.params.scaleY = filter:floatParam("ScaleY")
+		self.params.scale = 1.0
+		self.params.scaleX = filter:floatParam("ScaleX") * filter:floatParam("Scale")
+		self.params.scaleY = filter:floatParam("ScaleY") * filter:floatParam("Scale")
+		self.camera3D.enable = filter:boolParam("Camera3D")
 	end
 	
 	if filter.floatArrayParam then -- version compatible
@@ -82,15 +99,17 @@ function Filter:onApplyParams(context, filter)
 	self.debug = filter:floatParam("debug")
 	
 	self.params.opacity = filter:intParam("Opacity")
-
-	--Animation
-	Animation:loadFromFilter(context, filter)
-
-	BlendRender:onApplyParams(context, filter)
-	MaskRender:onApplyParams(context, filter)
+	self.params.color = filter:colorParam("Color")
+	self.motionBlur = filter:boolParam("MotionBlur")
+	--AnimationMgr
+	AnimationMgr:loadFromFilter(context, filter)
 	TextureRender:onApplyParams(context, filter)
 	
 	EffectList:onApplyParams(context, filter)
+
+	CropRender:onApplyParams(context, filter, dirtyTable)
+
+	DynamicCollage:onApplyParams(context, filter, dirtyTable)
 
 	return OF_Result_Success
 end
@@ -98,116 +117,96 @@ end
 function Filter:initRenderer(context, filter)
 	OF_LOGI(TAG, "call initRenderer")
 	self.context = context
-
+	DynamicCollage:initRenderer(context, filter)
+	MotionBlurRender:initRenderer(context, filter)
+	MotionBlurRender:setLayerMotion(true)
 	TextureRender:initRenderer(context, filter)
-	BlendRender:initRenderer(context, filter)
-	MaskRender:initRenderer(context, filter)
-
+	CropRender:initRenderer(context, filter)
 	return OF_Result_Success
 end
 
 function Filter:teardownRenderer(context, filter)
 	OF_LOGI(TAG, "call teardownRenderer")
-
+	DynamicCollage:teardown(context, filter)
+	MotionBlurRender:teardown(context, filter)
 	TextureRender:teardown(context)
-	BlendRender:teardown(context)
-	MaskRender:teardown(context)
-
+	CropRender:teardown(context, filter)
 	if self.imageTex then 
-		context:destroyTexture(self.imageTex) 
+		context:releaseTexture(self.imageTex) 
 		self.imageTex = nil
 	end -- destroy if exist
 	
 	EffectList:clear(context)
 
-	Animation:clear(context)
+	AnimationMgr:clear(context)
 
 	return OF_Result_Success
 end
 
 function Filter:drawFrame(context, baseTex, outTex, mvpMat)
-	context:bindFBO(outTex)
-	context:setViewport(0, 0, outTex.width, outTex.height)   
+	context:setBlend(false)	
 
-	if baseTex ~= nil then 
-		context:copyTexture(baseTex, outTex)
-		context:setBlend(true)
-		context:setBlendMode(RS_BlendFunc_SRC_ALPHA, RS_BlendFunc_INV_SRC_ALPHA)
-	else
-		context:setBlend(false)
-		context:setClearColor(0.0, 0.0, 0.0, 0.0)
-		context:clearColorBuffer()
+	local inTex = self.imageTex:toOFTexture()
+
+	local tempTexOF, tempTex = outTex, nil
+	if self.motionBlur then
+		tempTex = context:getTexture(outTex.width, outTex.height)
+		tempTexOF = tempTex:toOFTexture()
 	end
 
-	TextureRender:setOpacity(Animation.params.alpha * self.params.opacity / 100)
-	TextureRender:draw(context, self.imageTex:toOFTexture(), outTex, mvpMat)
+	TextureRender:setColor(Vec4f.new(1.0, 1.0, 1.0, 0.0))
+	TextureRender:draw(context, self.bgTexOF, tempTexOF, Matrix4f.new())
 
-	context:setBlend(false)
+	TextureRender:setColor(Vec4f.new(self.params.color.x, self.params.color.y, self.params.color.z, self.params.color.w * AnimationMgr.params.alpha * self.params.opacity / 100))
+	if self.params.rot ~= 0 then
+		TextureRender:drawAntiAlias(context, self.bgTexOF, inTex, tempTexOF, mvpMat)
+	else
+		TextureRender:draw(context, inTex, tempTexOF, mvpMat, true)
+	end
+	
+	if self.motionBlur then
+		MotionBlurRender:draw(context, tempTexOF, outTex, mvpMat)
+	end
 
-	MaskRender:draw(context, nil, self.maskTex, outTex, Matrix4f:ScaleMat(1.0, 1.0, 1.0))
+	if tempTex then context:releaseTexture(tempTex) end
 end
 
-function Filter:renderToOutputDirectly(context, filter, baseTex, outTex)
+function Filter:renderToOutputDirectly(context, filter, outTex)
 	local width, height = outTex.width, outTex.height
 
-	local scaleMat = Matrix4f:ScaleMat(self.params.scaleX * self.params.scale, self.params.scaleY * self.params.scale, 1.0)
+	local scaleMat = Matrix4f:ScaleMat(self.params.scaleX * self.params.scale, self.params.scaleY * self.params.scale, 0.0)
 	local rotMat = Matrix4f:RotMat(0, 0, self.params.rot)
 	local transMat = Matrix4f:TransMat(self.params.tx, self.params.ty, 0.0)
-
-	local animLocalTransMat = Matrix4f:TransMat(
-		Animation.params.localPosition[1], Animation.params.localPosition[2],
-		Animation.params.localPosition[3])
-	local animLocalScaleMat = Matrix4f:ScaleMat(
-		Animation.params.localScale[1], Animation.params.localScale[2],
-		Animation.params.localScale[3])
-	local animLocalRotMat = Matrix4f:RotMat(
-		Animation.params.localRotation[1], Animation.params.localRotation[2],
-		Animation.params.localRotation[3])
-
-	local animTransMat = Matrix4f:TransMat(
-		Animation.params.position[1], Animation.params.position[2], Animation.params.position[3])
-	local animScaleMat = Matrix4f:ScaleMat(
-		Animation.params.scale[1], Animation.params.scale[2],	Animation.params.scale[3])
-		
-	local animRotMat = Matrix4f:RotMat(
-		Animation.params.rotation[1], Animation.params.rotation[2], Animation.params.rotation[3])
 	
-	local viewMat, projMat = Matrix4f.new(), Matrix4f.new()
-	local rotXMat, rotYMat = Matrix4f.new(), Matrix4f.new()
-	if filter:boolParam("Camera") then
-		viewMat = Matrix4f:LookAtMat(Vec3f.new(0, 0, 8.0), Vec3f.new(0, 0, 0.0), Vec3f.new(0.0, 1.0, 0.0))
-		projMat = Matrix4f:PerspectiveMat(14.25, 1.0, 1.0, 101.0) --arctan(0.125) * 2 = 14.25
-		rotXMat, rotYMat = Matrix4f:RotMat(self.params.rotX, 0, 0), Matrix4f:RotMat(0, self.params.rotY, 0)
+	local animateMat = AnimationMgr:getMatrix();
+
+	local mvpMat = nil
+	if self.camera3D.enable then	
+		local viewMat = Matrix4f:LookAtMat(Vec3f.new(0.0, 0.0, self.camera3D.zPos), Vec3f.new(0.0, 0.0, 0.0), Vec3f.new(0.0, 1.0, 0.0))
+		local deltaZ = 2.0 * self.camera3D.zPos / outTex.height
+		local projMat = Matrix4f:PerspectiveMat(math.atan(1.0 / deltaZ) / math.pi * 180 * 2, outTex.width / outTex.height, 0.01, 2.0 * self.camera3D.zPos) 
+		local worldMat = self.params.fourCornerMat * 
+				animateMat.transMat * transMat * 
+				Matrix4f:RotMat(self.params.rotX, 0, 0) * Matrix4f:RotMat(0, self.params.rotY, 0) *
+				animateMat.rotMat * rotMat *	
+				animateMat.scaleMat * scaleMat *
+				animateMat.localTransMat * animateMat.localRotMat * animateMat.localScaleMat *
+				Matrix4f:ScaleMat(self.imageTex:width() * 0.5, self.imageTex:height() * 0.5, 1.0)	
+		mvpMat = projMat * viewMat * worldMat
+	else
+		mvpMat = Matrix4f:ScaleMat(2 / width, 2 / height, 1.0 ) * self.params.fourCornerMat * 
+				animateMat.transMat * transMat * 
+				animateMat.rotMat * rotMat *	
+				animateMat.scaleMat * scaleMat *
+				animateMat.localTransMat * animateMat.localRotMat * animateMat.localScaleMat *
+				Matrix4f:ScaleMat(self.imageTex:width() * 0.5, self.imageTex:height() * 0.5, 1.0)
 	end
 
-	local mvpMat = 
-		Matrix4f:ScaleMat(2 / width, 2 / height, 1.0 ) * self.params.fourCornerMat * 
-		animTransMat * transMat * projMat * viewMat *
-		animRotMat * rotMat *
-		animScaleMat * scaleMat *
-		animLocalTransMat * animLocalRotMat * animLocalScaleMat *
-		Matrix4f:ScaleMat(self.imageTex:width() * 0.5, self.imageTex:height() * 0.5, 1)
-		* rotXMat * rotYMat
-		
-	local blendTex = context:getTexture(width, height)
-
-	self.drawFrame(self, context, nil, blendTex:toOFTexture(), mvpMat)
-
-	BlendRender:draw(context, baseTex, blendTex:toOFTexture(), outTex, Matrix4f:ScaleMat(1.0, 1.0 , 1.0))
-
-	context:releaseTexture(blendTex)
+	self.drawFrame(self, context, nil, outTex, mvpMat)
 end
 
-function Filter:renderThroughRT(context, filter, baseTex, outTex)
-	local width, height = outTex.width, outTex.height
-
-	local texTemp = context:getTexture(width, height)
-
-	Animation:apply(self, filter, texTemp:toOFTexture())
-	
-	BlendRender:draw(context, baseTex, texTemp:toOFTexture(), outTex, Matrix4f:ScaleMat(1.0, 1.0 , 1.0))
-
-	context:releaseTexture(texTemp)
+function Filter:renderThroughRT(context, filter, outTex)
+	AnimationMgr:apply(self, filter, outTex)
 end
 
 function Filter:applyFrame(context, filter, frameData, inTexArray, outTexArray)	
@@ -216,10 +215,17 @@ function Filter:applyFrame(context, filter, frameData, inTexArray, outTexArray)
         return OF_Result_Success
     end
 
-	local imageTexOF = inTexArray[2]
+	self.bgTexOF = {
+		textureID = inTexArray[1].textureID,
+		width = outTexArray[1].width,
+		height = outTexArray[1].height
+	}
+
+	-- self.bgTexOF = inTexArray[1]
 	--
 	-- apply extra effects to inTexArray[2]
 	--
+	local imageTexOF = inTexArray[2]
 	local tempTex = context:getTexture(imageTexOF.width, imageTexOF.height)
 	if not EffectList:isEmpty() then
 		EffectList:apply(context, frameData, inTexArray[2], tempTex:toOFTexture(),
@@ -227,22 +233,48 @@ function Filter:applyFrame(context, filter, frameData, inTexArray, outTexArray)
 		imageTexOF = tempTex:toOFTexture()
 	end
 
-	if self.imageTex == nil then
-		self.imageTex = context:createTextureRef(imageTexOF)
-	else
-		context:updateTextureRef(self.imageTex, imageTexOF)
+	self.camera3D.zPos = math.max(imageTexOF.width * filter:floatParam("ScaleX") * filter:floatParam("Scale"), 
+			imageTexOF.height * filter:floatParam("ScaleY") * filter:floatParam("Scale")) * 4
+	
+	local collageTex = nil
+	if DynamicCollage:isEnabled() then
+		local widthFactor = math.min(filter:floatParam("ScaleX") * filter:floatParam("Scale"), 1.0)
+		local heightFactor = math.min(filter:floatParam("ScaleY") * filter:floatParam("Scale"), 1.0)
+		local curFactor = math.min(widthFactor, heightFactor)
+		self.params.scaleX = filter:floatParam("ScaleX") * filter:floatParam("Scale") / curFactor 
+		self.params.scaleY = filter:floatParam("ScaleY") * filter:floatParam("Scale") / curFactor
+		local collageUnit = {
+			width = imageTexOF.width * (1.0 + DynamicCollage._spaceX),
+			height = imageTexOF.height * (1.0 + DynamicCollage._spaceY)
+		}
+		local collageWidth = math.min(math.floor(collageUnit.width * DynamicCollage._width * curFactor + 0.5), 2048)
+		local collageHeight = math.min(math.floor(collageUnit.height * DynamicCollage._height * curFactor + 0.5), 2048)
+		collageTex = context:getTexture(collageWidth, collageHeight)
+		local scale = Matrix4f:ScaleMat(collageWidth / collageUnit.width / curFactor, collageHeight / collageUnit.height / curFactor, 1.0)
+		DynamicCollage:draw(context, imageTexOF, collageTex:toOFTexture(), scale)
+		imageTexOF = collageTex:toOFTexture()
 	end
-	--
-	-- apply maskTex from inTexArray[3]
-	--
-	self.maskTex =  inTexArray[3]
 
-	Animation:seek(self, filter)
-
-	if Animation.params.renderToRT then
-		self.renderThroughRT(self, context, filter, inTexArray[1], outTexArray[1])
+	if self.imageTex ~= nil then context:releaseTexture(self.imageTex) end
+	
+	if CropRender:isEnabled() then
+		self.imageTex = context:getTexture(CropRender.sourceWidth, CropRender.sourceHeight)
+		local scaleMat = Matrix4f:ScaleMat(self.params.scaleX * self.params.scale, self.params.scaleY * self.params.scale, 1.0)
+		local rotMat = Matrix4f:RotMat(0, 0, self.params.rot)
+		local transMat = Matrix4f:TransMat(self.params.tx, self.params.ty, 0.0)
+		local mvpMat = Matrix4f:ScaleMat(2 / outTexArray[1].width, 2 / outTexArray[1].height, 1.0 ) * 
+			transMat * rotMat * scaleMat *
+			Matrix4f:ScaleMat(CropRender.sourceWidth * 0.5, CropRender.sourceHeight * 0.5, 1.0)
+		CropRender:draw(context, imageTexOF, self.imageTex:toOFTexture(), self.bgTexOF, mvpMat)
 	else
-		self.renderToOutputDirectly(self, context, filter, inTexArray[1], outTexArray[1])
+		self.imageTex = context:createTextureRef(imageTexOF)
+	end
+	AnimationMgr:seek(self, filter)
+
+	if AnimationMgr.params.renderToRT then
+		self.renderThroughRT(self, context, filter, outTexArray[1])
+	else
+		self.renderToOutputDirectly(self, context, filter, outTexArray[1])
 	end
 
 	-- debug tex
@@ -251,7 +283,7 @@ function Filter:applyFrame(context, filter, frameData, inTexArray, outTexArray)
 	end
 
 	if tempTex then context:releaseTexture(tempTex) end
-
+	if collageTex then context:releaseTexture(collageTex) end
 	return OF_Result_Success
 end
 
@@ -283,7 +315,7 @@ function Filter:onReceiveMessage(context, filter, msg)
 		self.params.scale = evt.params[3]
 		self.params.rot = evt.params[4] * math.pi / 180
 	else
-		Animation:loadFromMsg(context, evt)
+		AnimationMgr:loadFromMsg(context, evt)
 	end
 	return ""
 end

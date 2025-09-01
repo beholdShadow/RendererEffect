@@ -36,7 +36,19 @@ local Config = {
     loop_animation = {
         "none",
         "rotation",
-        "spark"
+        "spark",
+        "wave_slide_in",
+        "wave_slide_out",
+        "wave_slide_in_II",
+        "wave_slide_out_II",
+        "Jitter_in",
+        "Jitter_in_II",
+        "little_train",
+        "little_trainII",
+        "little_trainIII",
+        "little_trainIV",
+        "spring_stretch",
+        "shinning_scale"
     }
 }
 return Config

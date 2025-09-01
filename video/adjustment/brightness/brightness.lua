@@ -54,7 +54,6 @@ local Filter = {
 			float alpha = fract(blueColor);
 			vec4 newColor = vec4(0.0);
 			if (uIntensity < 0.0){
-
 				vec4 newColor1 = texture2D(uTexture1, texPos1);
 				vec4 newColor2 = texture2D(uTexture1, texPos2);
 				newColor = mix(newColor1, newColor2, alpha);
@@ -63,7 +62,7 @@ local Filter = {
 				vec4 newColor2 = texture2D(uTexture2, texPos2);
 				newColor = mix(newColor1, newColor2, alpha);
 			}
-			gl_FragColor = mix(curColor,newColor,slider_progress);
+			gl_FragColor = vec4(mix(curColor.rgb, newColor.rgb, slider_progress), curColor.a);
         }
         ]],
 }
@@ -88,7 +87,7 @@ function Filter:onApplyParams(context, filter)
 	if self.imageTexMax then context:destroyTexture(self.imageTexMax) end -- destroy if exist
 	self.imageTexMax = context:loadTextureFromFile(fullpath, TEXTURE_2D, LINEAR, CLAMP_TO_EDGE, false, false)
 
-	if self.intensity == 0 then
+	if self.intensity then
 		self.intensity = filter:floatParam("Intensity")
 	end
 	return OF_Result_Success
@@ -114,6 +113,8 @@ function Filter:applyRGBA(context, filter, frameData, inTex, outTex, debugTex)
 	context:setViewport(0, 0, width, height)
 	context:bindFBO(outTex)
 	context:setBlend(false)
+	context:setClearColor(0.0, 0.0, 0.0, 0.0)
+	context:clearColorBuffer()
 
 	self.renderPass:use()
 	self.renderPass:setUniformTexture("uTexture0", 0, inTex.textureID, TEXTURE_2D)

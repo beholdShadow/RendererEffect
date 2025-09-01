@@ -38,14 +38,14 @@ local Filter = {
 			ss.r = curColor.r + h;// + s;
 			ss.g = curColor.g + h;// + s;
 			ss.b = curColor.b + h;// + s;
-			gl_FragColor = vec4(ss, 1.0);
+			gl_FragColor = vec4(ss, curColor.a);
         }
         ]],
 }
 
 function Filter:initParams(context, filter)
 	OF_LOGI(TAG, "call initParams")
-	filter:insertFloatParam("Intensity", 0, 1, 0)
+	filter:insertFloatParam("Intensity", -1, 1, 0)
 	return OF_Result_Success
 end
 

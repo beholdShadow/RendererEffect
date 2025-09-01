@@ -40,8 +40,7 @@ local MaskRender = {
             float mask = texture2D(uMaskTex, uv).r;
             
             float inverse = float(uInverse);
-            mask = mask * step(0.5, inverse) + (1.0 - mask) * step(inverse, 0.5);
-            //vec3 finalColor = mix(vec3(1.0), color.rgb, mask);
+            mask = mix(1.0 - mask, mask, step(inverse, 0.5));
 
             gl_FragColor = vec4(color.rgb, mask * color.a);
         }
@@ -60,8 +59,8 @@ local MaskRender = {
             float mask = texture2D(uMaskTex, vTexCoord).r;
             
             float inverse = float(uInverse);
-            mask = mask * step(0.5, inverse) + (1.0 - mask) * step(inverse, 0.5);
-            //vec3 finalColor = mix(vec3(1.0), color.rgb, mask);
+            
+            mask = mix(1.0 - mask, mask, step(inverse, 0.5));
 
             gl_FragColor = vec4(color.rgb, mask * color.a);
         }

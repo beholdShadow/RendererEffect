@@ -2,7 +2,34 @@ local WordPrint = {
     duration = 1000,
     timestamp = 0,
     charJumpData = {} ,
-    color = Vec4f.new(1.0, 1.0, 1.0, 1.0)
+    color = Vec4f.new(1.0, 1.0, 1.0, 1.0),
+    renderToRT = true,
+    extraSpace = true,
+    vs = [[
+        precision highp float;
+        attribute vec4 aPosition;
+        attribute vec4 aTextureCoord;
+        varying vec2 vTexCoord;
+        uniform mat4 uMVP;
+
+        void main()
+        {
+            gl_Position = uMVP * aPosition;
+            vTexCoord = aTextureCoord.xy;
+        }
+        ]],
+    fs_wave = [[
+        precision mediump float;
+        varying vec2 vTexCoord;
+        uniform sampler2D uTexture0;
+
+        void main()
+        {
+            vec2 texCoord = vTexCoord;
+            gl_FragColor = texture2D(uTexture0, texCoord);
+        }
+        ]],
+    wavePass = nil
 }
 
 function WordPrint:init(filter) 
@@ -14,9 +41,14 @@ function WordPrint:init(filter)
     table.insert(self.colorArr,  {color = Vec4f.new(1.0, 1.0, 1.0, 0.0), outlineColor = Vec4f.new(1.0, 1.0, 1.0, 1.0)})
     self.index = math.random(1, #self.colorArr)
     self.color = self.colorArr[index]
+    self.wavePass = filter.context:createCustomShaderPass(self.vs, self.fs_wave)
 end
 
 function WordPrint:clear(filter)
+    if self.wavePass ~= nil then
+        filter.context:destroyCustomShaderPass(self.wavePass)
+        self.wavePass = nil
+    end
 end
 
 function WordPrint:setDuration(filter, duration)
@@ -176,6 +208,29 @@ function WordPrint:apply(filter)
             end
         end
     end
+end
+
+function WordPrint:applyEffect(label, srcTex, dstTex)
+    if #label.chars <= 0 then
+        return
+    end
+    local blurRender = label.getBlurRender()
+    blurRender:setGaussStrength(0.4)
+    blurRender:setGaussIterCount(10)
+    blurRender:draw(label.context, srcTex, dstTex)
+
+    local mvpMat = Matrix4f:ScaleMat(1.0, 1.0, 1.0)
+
+    label.context:bindFBO(dstTex)
+    label.context:setViewport(0, 0, dstTex.width, dstTex.height)
+    label.context:setBlend(true)
+    label.context:setBlendMode(RS_BlendFunc_ONE, RS_BlendFunc_INV_SRC_ALPHA)
+    self.wavePass:use()
+    self.wavePass:setUniformTexture("uTexture0", 0, srcTex.textureID, TEXTURE_2D)
+    self.wavePass:setUniformMatrix4fv("uMVP", 1, 0, mvpMat.x)
+
+    local quadRender = label.context:sharedQuadRender()
+    quadRender:draw(self.wavePass, false)
 end
 
 return WordPrint

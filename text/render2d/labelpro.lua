@@ -335,6 +335,10 @@ function LabelPro:initRenderer(context, filter)
     return OF_Result_Success
 end
 
+function LabelPro:getBlurRender()
+    return bmpBlurRender
+end
+
 function LabelPro:teardown(context)
     OF_LOGI(LabelTag, "call teardownRenderer")
     self.clearMeshBatch(self, context)

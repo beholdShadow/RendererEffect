@@ -27,7 +27,7 @@ local Filter = {
 
         void main()
         {
-			float slider_progress = abs(uIntensity);
+			float slider_progress = uIntensity;
 			slider_progress = slider_progress * 0.7;
 			vec4 curColor = texture2D(uTexture0, vTexCoord);
 			vec4 textureColor = curColor;
@@ -53,14 +53,14 @@ local Filter = {
 			vec4 newColor1 = texture2D(uTexture1, texPos1);
 			vec4 newColor2 = texture2D(uTexture1, texPos2);
 			vec4 newColor = mix(newColor1, newColor2, alpha);
-			gl_FragColor = mix(curColor,newColor,slider_progress);
+			gl_FragColor = vec4(mix(curColor.rgb, newColor.rgb, slider_progress * curColor.a), curColor.a);
         }
         ]],
 }
 
 function Filter:initParams(context, filter)
 	OF_LOGI(TAG, "call initParams")
-	filter:insertFloatParam("Intensity", 0, 1, 0)
+	filter:insertFloatParam("Intensity", -1, 1, 0)
     filter:insertResParam("ImageMax", OF_ResType_Image, "")
 	return OF_Result_Success
 end

@@ -21,11 +21,14 @@ local gaussBlurRender = {
         uniform float uKernel[50];
         uniform int uKernelSize;
         
+        const int INT_MAX = 9999;
+        
         void main()
         {
             vec4 color = texture2D(uTexture, vTexCoord) * uKernel[0];
-            for (int i = 1; i < uKernelSize; i++)
+            for (int i = 1; i < INT_MAX; i++)
             {
+                if(i >= uKernelSize) break;
                 vec2 pixelOffset = uOnePixel * vec2(i);
                 color += texture2D(uTexture, vTexCoord + pixelOffset) * uKernel[i];
                 color += texture2D(uTexture, vTexCoord - pixelOffset) * uKernel[i];
@@ -36,6 +39,7 @@ local gaussBlurRender = {
     
     blurPass = nil,
     blurKernel = FloatArray.new(50),
+    blurStrength = 0.5,
     blurKernelSize = 3,
     blurHorizontal = true,
     blurVertical = true,
@@ -43,19 +47,19 @@ local gaussBlurRender = {
 }
 
 function gaussBlurRender:initParams(context, filter)
-    filter:insertFloatParam("BlurStrength", 0.0, 1.0, 0.5)
+    filter:insertFloatParam("BlurStrength", 0.0, 1.0, self.blurStrength)
 	filter:insertIntParam("BlurStep", 1, 10, self.blurIterCount)
     filter:insertEnumParam("BlurDirection", 0, { "HorizontalAndVertical", "Horizontal", "Vertical"})
 end
 
 function gaussBlurRender:initRenderer(context, filter)
-    OF_LOGI(TAG, "call initRenderer")
+    OF_LOGI(TAG, "call gaussBlurRender initRenderer")
     self.blurPass = context:createCustomShaderPass(self.vs, self.fs_gauss_blur)
     return OF_Result_Success
 end
 
-function gaussBlurRender:teardown(context)
-    OF_LOGI(TAG, "call teardownRenderer")
+function gaussBlurRender:teardown(context, filter)
+    OF_LOGI(TAG, "call gaussBlurRender teardownRenderer")
     if self.blurPass then
         context:destroyCustomShaderPass(self.blurPass)
         self.blurPass = nil
@@ -64,9 +68,9 @@ function gaussBlurRender:teardown(context)
 end
 
 function gaussBlurRender:onApplyParams(context, filter)
-    self.blurKernekSize = math.ceil(filter:floatParam("BlurStrength") * 10)
-    self.blurIterCount = filter:intParam("BlurStep")
-
+    self.blurKernekSize = math.ceil(filter:floatParam("BlurStrength") * 48)
+    self.blurIterCount = filter:floatParam("BlurStrength") * 10;
+    self.blurStrength = filter:floatParam("BlurStrength")
     if filter:enumParam("BlurDirection") == 0 then
         self.blurVertical = true
         self.blurHorizontal = true
@@ -104,14 +108,27 @@ function gaussBlurRender:makeGaussKernel(sigma, kernel_size)
     self.blurKernekSize = kernel_size + 1
 end
 
+function gaussBlurRender:setGaussStrength(value)
+    self.blurKernekSize = math.ceil(value * 48)
+    self.blurStrength = value
+    
+    self.makeGaussKernel(self, 3, self.blurKernekSize)
+end
+
 function gaussBlurRender:setGaussIterCount(iterNum)
     self.blurIterCount = iterNum
 end
 
+function gaussBlurRender:smoothstep(edge0, edge1, x) 
+    x = (x - edge0) / (edge1 - edge0)
+    return x * x * (3 - 2 * x)
+end
+
 function gaussBlurRender:draw(context, inTex, outTex)
-    local width  = outTex.width
-    local height = outTex.height
+    local width  = inTex.width * (1.0 - 0.85 * self:smoothstep(0.0, 1.0, self.blurStrength))
+    local height = inTex.height * (1.0 - 0.85 * self:smoothstep(0.0, 1.0, self.blurStrength))
     local cache_tex = context:getTexture(width, height)
+    local out_tex = context:getTexture(width, height)
     local quad_render = context:sharedQuadRender()
 
     context:setViewport(0, 0, width, height)
@@ -128,7 +145,7 @@ function gaussBlurRender:draw(context, inTex, outTex)
     
         quad_render:draw(self.blurPass, false)
 
-        context:bindFBO(outTex)
+        context:bindFBO(out_tex:toOFTexture())
         self.blurPass:setUniform2f("uOnePixel", 0.0, (self.blurVertical and {1.0 / height} or {0.0})[1])
         self.blurPass:setUniformTexture("uTexture", 0, cache_tex:textureID(), TEXTURE_2D)
     
@@ -138,10 +155,13 @@ function gaussBlurRender:draw(context, inTex, outTex)
     doBlur(inTex)
 
     for i = 1, self.blurIterCount-1 do
-        doBlur(outTex)
+        doBlur(out_tex:toOFTexture())
     end
 
+    context:copyTexture(out_tex:toOFTexture(), outTex)
+
     context:releaseTexture(cache_tex)
+    context:releaseTexture(out_tex)
 end
 
 

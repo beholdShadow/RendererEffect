@@ -208,4 +208,26 @@ function Animation:clear(context)
     end
 end
 
+function Animation:getMatrix()
+	local animMat = {}
+	animMat.localTransMat = Matrix4f:TransMat(
+		self.params.localPosition[1], self.params.localPosition[2],
+		self.params.localPosition[3])
+	animMat.localScaleMat = Matrix4f:ScaleMat(
+		self.params.localScale[1], self.params.localScale[2],
+		self.params.localScale[3])
+	animMat.localRotMat = Matrix4f:RotMat(
+		self.params.localRotation[1], self.params.localRotation[2],
+		self.params.localRotation[3])
+
+	animMat.transMat = Matrix4f:TransMat(
+		self.params.position[1], self.params.position[2], self.params.position[3])
+	animMat.scaleMat = Matrix4f:ScaleMat(
+		self.params.scale[1], self.params.scale[2],	self.params.scale[3])	
+	animMat.rotMat = Matrix4f:RotMat(
+		self.params.rotation[1], self.params.rotation[2], self.params.rotation[3])
+
+	return animMat
+end
+
 return Animation

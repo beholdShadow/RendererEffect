@@ -63,8 +63,8 @@ local Filter = {
 				vec4 newColor2 = texture2D(uTexture2, texPos2);
 				newColor = mix(newColor1, newColor2, alpha);
 			}
-			gl_FragColor = mix(curColor,newColor,slider_progress);
-        }
+			gl_FragColor = vec4(mix(curColor.rgb, newColor.rgb, slider_progress), curColor.a);
+		}
         ]],
 }
 

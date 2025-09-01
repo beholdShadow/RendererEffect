@@ -1,1 +1,20 @@
-{"id":"0FAF1234-B9C5-4FA0-9EB8-00FCE19DDE10","remoteID":"sdk_xxx_video","version":"1","author":"pengjun","summary":"","type":"Effect","thumb":"","ofFile":"bundle://video.ofeffect","createTimestamp":"1609852107822","lastChangedTimestamp":"1609852107822","isDebug":"false"}
+{
+    "anchor": "",
+    "createTimestamp": "0",
+    "extra": {
+    },
+    "id": "54e3b6d36d232f81872fd74ffa2d3f70",
+    "inputConfig": "",
+    "inputList": "",
+    "isDebug": "0",
+    "lastChangedTimestamp": "1665731800",
+    "ofFile": "bundle://video.ofeffect",
+    "remoteId": "",
+    "resFile": "",
+    "skyFile": "",
+    "summary": "",
+    "thumb": "",
+    "title": "video",
+    "type": "Effect",
+    "version": "1.1.1"
+}
