@@ -1,0 +1,163 @@
+{
+    "ofversion": "4.9",
+    "audioName": "",
+    "duration": 5000,
+    "playMode": 0,
+    "isFadeout": false,
+    "fadeoutStart": 0.0,
+    "trackDataCacheTime": 0,
+    "input_count": 1,
+    "input_list": [
+        {
+            "type": "image",
+            "url": "../../../../../Data/Image/01_head_1.jpg"
+        }
+    ],
+    "user_image_is_used": false,
+    "user_image_path": "",
+    "effect_paramf_count": 0,
+    "effect_paramf_list": [],
+    "filter_count": 1,
+    "filter_list": [
+        {
+            "beginTime": 0,
+            "endTime": 5000,
+            "type": "CustomLuaFilter2",
+            "uuid": "{C21B3415-7184-49ad-BB24-407C446F6946}",
+            "isFreeze": false,
+            "duration": 5000,
+            "description": "",
+            "paramf": {
+                "Scale": 0.8295900225639343,
+                "ScaleX": 1.0,
+                "ScaleY": 1.0,
+                "Scale1": 0.5,
+                "TextureScale": 1.4460300207138062,
+                "Outline1Thickness": 0.0,
+                "Outline1Scale": 0.4650000035762787,
+                "Outline2Scale": 0.3959999978542328,
+                "Outline3Scale": 0.2939999997615814,
+                "ShadowBlur": 0.0,
+                "ShadowPadding": 0.0,
+                "ShadowDistance": 2.630000114440918,
+                "ShadowAngle": -49.75199890136719,
+                "ContentWidth": 0.09810999780893326,
+                "ContentHeight": 0.04385799914598465,
+                "Smooth": 1.5,
+                "EnterAnimDuration": 1.0,
+                "ExitAnimDuration": 1.0,
+                "LoopAnimDuration": 5.0
+            },
+            "parami": {
+                "TransX": 0,
+                "TransY": 0,
+                "Rotate": 0,
+                "Opacity": 100,
+                "Size": 128,
+                "SDFSpread": 18,
+                "Spacing": 1,
+                "Leading": 37,
+                "BackgroundXPadding": 30,
+                "BackgroundYPadding": 30,
+                "BackgroundRadius": 96,
+                "AnchorTransX": 0,
+                "AnchorTransY": 0
+            },
+            "parambool": {
+                "SDF": true,
+                "TextureEnabled": false,
+                "Outline1Enabled": false,
+                "Outline2Enabled": false,
+                "Outline3Enabled": false,
+                "Bold": false,
+                "Shadow": false,
+                "BackgroundEnabled": false,
+                "AutoAlignment": false,
+                "AutoScale": false,
+                "Debug": false,
+                "Mask": false,
+                "MaskInverse": false
+            },
+            "paramenum": {
+                "Direction": 0,
+                "Alignment": 0,
+                "AnchorType": 0,
+                "EnterAnim": 0,
+                "ExitAnim": 0,
+                "LoopAnim": 12
+            },
+            "paramres": {
+                "Texture": {
+                    "resType": 1,
+                    "resName": ""
+                },
+                "InternalFont": {
+                    "resType": 16,
+                    "resName": ""
+                }
+            },
+            "paramresarr": {},
+            "parammakeupres": {},
+            "paramcolor": {
+                "Color1": [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "Outline1Color1": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ],
+                "Outline2Color1": [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "Outline3Color1": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ],
+                "ShadowColor": [
+                    1.0,
+                    1.0,
+                    0.0,
+                    1.0
+                ],
+                "BackgroundColor": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "paramstring": {
+                "Text": "THIS IS THE\nBEST PRODUCT\nSO WHAT ",
+                "BoundRect": "",
+                "CustomFontPath": "d:\\code\\semi-automatic_mixed_video\\template2\\IndivisibleApp-Bold.ttf",
+                "SystemFontDir": "E:\\template\\template_python\\auto_res_oss\\res\\fonts",
+                "SystemFontNames": "ko.ttf,zh-hans.ttf",
+                "EnterAnimDir": "",
+                "ExitAnimDir": "",
+                "LoopAnimDir": "",
+                "BubbleDir": "",
+                "FlowerDir": ""
+            },
+            "parampath": {},
+            "paramfloatarray": {},
+            "ext_data": {
+                "luaScriptName": "text.lua",
+                "filterDir": ""
+            }
+        }
+    ],
+    "animator_count": 0,
+    "animator_list": [],
+    "scene_count": 0,
+    "scene_list": []
+}
