@@ -143,7 +143,7 @@ function Filter:applyFrame(context, filter, frameData, inArray, outArray)
 
     if inArray[2] ~= nil then
         context:bindFBO(outArray[1])
-        context:setViewport(0, 0, outArray[1].width, outArray[1].height)
+        context:setViewport(PixelSize.new(outArray[1].width, outArray[1].height, outArray[1].pixelScale))
 
         self.renderPass:use()
         self.renderPass:setTexture("uTexture0", 0, inArray[1])

@@ -87,7 +87,7 @@ end
 
 function applyRGBA(context, filter, frameData, inTex, outTex, debugTex)
 
-	context:setViewport(0, 0, outTex.width, outTex.height)
+	context:setViewport(PixelSize.new(outTex.width, outTex.height, outTex.pixelScale))
 	context:setBlend(false)
 	context:bindFBO(outTex)
 	_levelsPass:use()

@@ -1,16 +1,20 @@
 {
-    "ofversion": "3.4",
+    "ofversion": "4.9",
     "audioName": "",
-    "duration": 0,
+    "duration": 1000,
     "playMode": 0,
     "isFadeout": false,
     "fadeoutStart": 0.0,
     "trackDataCacheTime": 0,
-    "input_count": 1,
+    "input_count": 2,
     "input_list": [
         {
             "type": "image",
-            "url": "F:/ͼƬ/�˾�/��ͼ.jpg"
+            "url": "../../resource/1.png"
+        },
+        {
+            "type": "image",
+            "url": "../../resource/2.png"
         }
     ],
     "user_image_is_used": false,
@@ -21,14 +25,14 @@
     "filter_list": [
         {
             "beginTime": 0,
-            "endTime": 0,
-            "type": "LookUpTableFilter",
-            "uuid": "{761AB466-BE80-478d-B386-606AF88CD696}",
+            "endTime": 1000,
+            "type": "CustomLuaFilter2",
+            "uuid": "{D5AB1E24-39A6-4b2d-91DB-BFF1F8B77690}",
             "isFreeze": false,
-            "duration": 0,
+            "duration": 1000,
             "description": "",
             "paramf": {
-                "Intensity": 1.0
+                "Duration": 1.0
             },
             "parami": {},
             "parambool": {},
@@ -39,7 +43,8 @@
             "paramcolor": {},
             "paramstring": {},
             "ext_data": {
-                "LUTPath": "old1.png"
+                "luaScriptName": "ZoomFar.lua",
+                "filterDir": ""
             }
         }
     ],

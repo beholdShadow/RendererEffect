@@ -87,7 +87,7 @@ function directBlurRender:draw(context, inTex, outTex)
     local render = context:sharedQuadRender()
 
     context:bindFBO(outTex)
-    context:setViewport(0, 0, width, height)
+    context:setViewport(PixelSize.new(width, height, outTex.pixelScale))
 
     self._blurPass:use()
     self._blurPass:setUniformMatrix4fv("uMVP", 1, 0, Matrix4f.new().x)

@@ -161,13 +161,13 @@ function MaskRender:drawWithAnimation(context, inTex, maskTex, outTex, maskMat)
 
     local temp = nil
     if inTex == nil then
-        temp = context:getTexture(outTex.width, outTex.height)
+        temp = context:getTexture(PixelSize.new(outTex.width, outTex.height, outTex.pixelScale))
         inTex = temp:toOFTexture()
         context:copyTexture(outTex, inTex)
     end
 
     context:bindFBO(outTex)
-    context:setViewport(0, 0, outTex.width, outTex.height)
+    context:setViewport(PixelSize.new(outTex.width, outTex.height, outTex.pixelScale))
     context:setBlend(false)
     
     self.maskAnimatePass:use()

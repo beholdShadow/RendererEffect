@@ -150,7 +150,7 @@ function Filter:drawFrame(context, baseTex, outTex, mvpMat)
 
 	local tempTexOF, tempTex = outTex, nil
 	if self.motionBlur then
-		tempTex = context:getTexture(outTex.width, outTex.height)
+		tempTex = context:getTexture(PixelSize.new(outTex.width, outTex.height, outTex.pixelScale))
 		tempTexOF = tempTex:toOFTexture()
 	end
 
@@ -201,7 +201,7 @@ function Filter:renderToOutputDirectly(context, filter, outTex)
 				animateMat.localTransMat * animateMat.localRotMat * animateMat.localScaleMat *
 				Matrix4f:ScaleMat(self.imageTex:width() * 0.5, self.imageTex:height() * 0.5, 1.0)
 	end
-
+	-- OF_LOGI(TAG, string.format("renderToOutputDirectly mvpMat: %s", mvpMat))
 	self.drawFrame(self, context, nil, outTex, mvpMat)
 end
 
@@ -215,18 +215,23 @@ function Filter:applyFrame(context, filter, frameData, inTexArray, outTexArray)
         return OF_Result_Success
     end
 
+	local pixelScale = outTexArray[1].pixelScale
+
 	self.bgTexOF = {
 		textureID = inTexArray[1].textureID,
 		width = outTexArray[1].width,
 		height = outTexArray[1].height
 	}
 
-	-- self.bgTexOF = inTexArray[1]
 	--
 	-- apply extra effects to inTexArray[2]
 	--
-	local imageTexOF = inTexArray[2]
-	local tempTex = context:getTexture(imageTexOF.width, imageTexOF.height)
+	local imageTexOF = context:createTextureRef(inTexArray[2]):toOFTexture()
+	imageTexOF.pixelScale = pixelScale
+	-- 统一合成的分辨率和预览设计的源分辨率，解决预览/合成的源的宽高不一致导致矩阵计算偏差问题
+	imageTexOF.width = CropRender.sourceWidth
+	imageTexOF.height = CropRender.sourceHeight
+	local tempTex = context:getTexture(PixelSize.new(imageTexOF.width, imageTexOF.height, pixelScale))
 	if not EffectList:isEmpty() then
 		EffectList:apply(context, frameData, inTexArray[2], tempTex:toOFTexture(),
 			outTexArray[2], filter:filterTimestamp())
@@ -249,7 +254,7 @@ function Filter:applyFrame(context, filter, frameData, inTexArray, outTexArray)
 		}
 		local collageWidth = math.min(math.floor(collageUnit.width * DynamicCollage._width * curFactor + 0.5), 2048)
 		local collageHeight = math.min(math.floor(collageUnit.height * DynamicCollage._height * curFactor + 0.5), 2048)
-		collageTex = context:getTexture(collageWidth, collageHeight)
+		collageTex = context:getTexture(PixelSize.new(collageWidth, collageHeight, pixelScale))
 		local scale = Matrix4f:ScaleMat(collageWidth / collageUnit.width / curFactor, collageHeight / collageUnit.height / curFactor, 1.0)
 		DynamicCollage:draw(context, imageTexOF, collageTex:toOFTexture(), scale)
 		imageTexOF = collageTex:toOFTexture()
@@ -258,7 +263,7 @@ function Filter:applyFrame(context, filter, frameData, inTexArray, outTexArray)
 	if self.imageTex ~= nil then context:releaseTexture(self.imageTex) end
 	
 	if CropRender:isEnabled() then
-		self.imageTex = context:getTexture(CropRender.sourceWidth, CropRender.sourceHeight)
+		self.imageTex = context:getTexture(PixelSize.new(CropRender.sourceWidth, CropRender.sourceHeight, pixelScale))
 		local scaleMat = Matrix4f:ScaleMat(self.params.scaleX * self.params.scale, self.params.scaleY * self.params.scale, 1.0)
 		local rotMat = Matrix4f:RotMat(0, 0, self.params.rot)
 		local transMat = Matrix4f:TransMat(self.params.tx, self.params.ty, 0.0)
@@ -269,6 +274,10 @@ function Filter:applyFrame(context, filter, frameData, inTexArray, outTexArray)
 	else
 		self.imageTex = context:createTextureRef(imageTexOF)
 	end
+	-- OF_LOGI(TAG, string.format("lua apply frame applyFrame imageTexOF.width: %d, imageTexOF.height: %d, imageTexOF.pixelScale: %f, outTexArray[1].scale: %f, outTexArray[1].width: %d, outTexArray[1].height: %d", 
+		-- 	imageTexOF.width, imageTexOF.height,
+		--  imageTexOF.pixelScale, outTexArray[1].pixelScale,
+		-- 	outTexArray[1].width, outTexArray[1].height))
 	AnimationMgr:seek(self, filter)
 
 	if AnimationMgr.params.renderToRT then

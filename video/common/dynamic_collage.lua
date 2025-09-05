@@ -109,7 +109,7 @@ end
 function DynamicCollage:draw(context, inTex, outTex, mvpMat)
     -- OF_LOGI(TAG, string.format("DynamicCollage out w = %f, h = %f", outTex.width, outTex.height))
     context:bindFBO(outTex)
-    context:setViewport(0, 0, outTex.width, outTex.height)
+    context:setViewport(PixelSize.new(outTex.width, outTex.height, outTex.pixelScale))
 
     local render = context:sharedQuadRender()   
 

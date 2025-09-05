@@ -58,7 +58,7 @@ local CropRender = {
     cropRot = 0,
     sourceWidth = 1024,
     sourceHeight = 1024,
-
+    enabled = false,
     fillMode = DEF_FillFrostedGlass,
     fillColor = Vec4f.new(1.0, 1.0, 1.0, 1.0),
     fillIntensity = 1.0,
@@ -74,6 +74,7 @@ function CropRender:initParams(context, filter)
     filter:insertIntParam("CropRotate", -180, 180, 0)
     filter:insertIntParam("CropSourceWidth", 0, 4096, self.sourceWidth)
     filter:insertIntParam("CropSourceHeight", 0, 4096, self.sourceHeight)
+    filter:insertBoolParam("CropEnabled", self.enabled)
     filter:insertEnumParam("CropFillMode", self.fillMode, { "color", "frosted glass"})
     filter:insertColorParam("CropFillColor", self.fillColor)
     filter:insertFloatParam("CropFillIntensity", 0, 1.0, self.fillIntensity)
@@ -123,7 +124,9 @@ function CropRender:onApplyParams(context, filter, dirtyTable)
             self.fillFrostedST = Json.JsonToTable(str)
         end
     end
-
+    if dirtyTable:isDirty("CropEnabled") then
+        self.enabled = filter:boolParam("CropEnabled")
+    end
     NoiseRender:onApplyParams(context, filter)
     if dirtyTable:isDirty("CropSourceWidth") or dirtyTable:isDirty("CropSourceHeight") or dirtyTable:isDirty("NoiseNum")  then
         self.sourceWidth = filter:intParam("CropSourceWidth")
@@ -164,7 +167,7 @@ function CropRender:teardown(context, filter)
 end
 
 function CropRender:isEnabled()
-    return self.sourceWidth > 0 and self.sourceHeight > 0
+    return self.enabled
 end
 
 function CropRender:draw(context, inTex, outTex, bgTex, clipMat)
@@ -172,9 +175,9 @@ function CropRender:draw(context, inTex, outTex, bgTex, clipMat)
     local centerX = ((self.cropRect[1] + self.cropRect[3] / 2) - 0.5) * outTex.width
     local centerY = ((self.cropRect[2] + self.cropRect[4] / 2) - 0.5) * outTex.height
     if self.fillMode == DEF_FillFrostedGlass then
-        local frostedGlassTex = context:getTexture(outTex.width, outTex.height)
+        local frostedGlassTex = context:getTexture(PixelSize.new(outTex.width, outTex.height, outTex.pixelScale))
         context:bindFBO(frostedGlassTex:toOFTexture())
-        context:setViewport(0, 0, frostedGlassTex:width(), frostedGlassTex:height()) 
+        context:setViewport(PixelSize.new(frostedGlassTex:width(), frostedGlassTex:height(), frostedGlassTex.pixelScale)) 
         context:setClearColor(1.0, 1.0, 1.0, 0.0)
         context:clearColorBuffer()
         if bgTex then
@@ -184,7 +187,7 @@ function CropRender:draw(context, inTex, outTex, bgTex, clipMat)
         end
         local blurTexTable = {};
         for i = 1, 3, 1 do
-            local temp = context:getTexture(outTex.width * 0.15, outTex.height * 0.15)
+            local temp = context:getTexture(PixelSize.new(outTex.width * 0.15, outTex.height * 0.15, outTex.pixelScale))
             table.insert(blurTexTable, temp)
         end
         local fillWidth, fillHeight
@@ -220,7 +223,7 @@ function CropRender:draw(context, inTex, outTex, bgTex, clipMat)
         end
 
         context:bindFBO(outTex) 
-        context:setViewport(0, 0, outTex.width, outTex.height)
+        context:setViewport(PixelSize.new(outTex.width, outTex.height, outTex.pixelScale))
         self.pass:use()
         self.pass:setUniformMatrix4fv("uMVP", 1, 0, Matrix4f.new().x)
         self.pass:setUniformTexture("uBaseTex", 0, frostedGlassTex:textureID(), TEXTURE_2D)
@@ -239,7 +242,7 @@ function CropRender:draw(context, inTex, outTex, bgTex, clipMat)
         context:releaseTexture(frostedGlassTex)
     else    
         context:bindFBO(outTex)
-        context:setViewport(0, 0, outTex.width, outTex.height)
+        context:setViewport(PixelSize.new(outTex.width, outTex.height, outTex.pixelScale))
         context:setClearColor(self.fillColor.x, self.fillColor.y, self.fillColor.z, self.fillColor.w)
         context:clearColorBuffer()
     end

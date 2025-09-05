@@ -58,8 +58,8 @@
                 "TileY": 1,
                 "FPS": 1,
                 "CropRotate": 0,
-                "CropSourceWidth": 0,
-                "CropSourceHeight": 0,
+                "CropSourceWidth": 1080,
+                "CropSourceHeight": 1920,
                 "Beauty": 0,
                 "ThinFace": 0,
                 "Brightness": 0,
@@ -73,7 +73,7 @@
                 "Tone": 0
             },
             "parambool": {
-                "Camera3D": true,
+                "Camera3D": false,
                 "MotionBlur": false,
                 "CollageMirror": false,
                 "CollageHorizontalOffset": false

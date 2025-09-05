@@ -202,6 +202,7 @@ function LabelPro:initParams(context, filter)
 
     filter:insertResParam("InternalFont", OF_ResType_TTF, "")
     filter:insertStringParam("CustomFontPath", "")
+    filter:insertStringParam("EmojiFontPath", "")
     filter:insertStringParam("SystemFontDir", "")
     filter:insertStringParam("SystemFontNames", "")
     filter:insertFloatParam("ContentWidth", 0.01, 1.0, 0.5)
@@ -281,7 +282,7 @@ function LabelPro:onApplyParams(context, filter, dirtyTable)
         shadowBlurPadding = filter:floatParam("ShadowPadding") * (-1.0),
         shadowDistance = filter:floatParam("ShadowDistance"),
         shadowAngle = filter:floatParam("ShadowAngle"),
-        boldScale = (self.boldEnabled and {0.0} or {0.0})[1]
+        boldScale = (self.boldEnabled and {0.05} or {0.0})[1]
     }
 
     local bmpStyle = {
@@ -481,6 +482,11 @@ function LabelPro:getGlyph(context, char)
     local fontAtlasCache = context:getFontAtlasCache()
     local fontAtlas = nil
     local glyph = nil
+    local emojiFontPath = self.filter:stringParam("EmojiFontPath")
+    -- emojiFontPath = "fonts/NotoColorEmoji.ttf"
+    -- if string.len(emojiFontPath) > 0 then
+    --     fontAtlasCache:setEmojiFont(self.filter:resFullPath(emojiFontPath))
+    -- end
 
     if char == DEFINE_SPACE_CHAR_UFT8 then
         glyph = {}
@@ -494,7 +500,7 @@ function LabelPro:getGlyph(context, char)
 
     if string.len(self.fontPath) > 0 then
         fontAtlas = fontAtlasCache:getFontAtlas2(
-            self.fontPath, self.fontSize, self.bmpStyle.outlineSize, self.boldEnabled,
+            self.fontPath, self.fontSize, self.bmpStyle.outlineSize, false,
             self.distanceFieldEnabled, self.sdfDistanceMapSpread)
         glyph = fontAtlas:getGlyph(char)
 
@@ -507,7 +513,7 @@ function LabelPro:getGlyph(context, char)
             fontPath = self.filter:resFullPath(fontPath)
             -- OF_LOGI(LabelTag, string.format("system font path = %s", fontPath))
             fontAtlas = fontAtlasCache:getFontAtlas2(
-                fontPath, self.fontSize, self.bmpStyle.outlineSize, self.boldEnabled,
+                fontPath, self.fontSize, self.bmpStyle.outlineSize, false,
                 self.distanceFieldEnabled, self.sdfDistanceMapSpread)
             glyph = fontAtlas:getGlyph(char)
             if glyph and glyph.texture then 
@@ -1306,13 +1312,13 @@ function LabelPro:setFont(fontPath, fontDir)
     end
 end
 
-    function LabelPro:setFontSize(size)
-        if self.fontSize ~= size then
-            OF_LOGI(LabelTag, "setFontSize")
-            self.fontSize = size
-            self.setDirty(self)
-        end
+function LabelPro:setFontSize(size)
+    if self.fontSize ~= size then
+        OF_LOGI(LabelTag, "setFontSize")
+        self.fontSize = size
+        self.setDirty(self)
     end
+end
 
 function LabelPro:setSDFSpread(spread)
     if self.sdfDistanceMapSpread ~= spread then
