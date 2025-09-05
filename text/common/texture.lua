@@ -256,7 +256,7 @@ end
 
 function TextureRender:draw(context, inTex, outTex, texMat, discard)
     context:bindFBO(outTex)
-    context:setViewport(0, 0, outTex.width, outTex.height)
+    context:setViewport(PixelSize.new(outTex.width, outTex.height, outTex.pixelScale))
 
     local pass = self.simplePass
     if discard ~= nil and discard ~= false then
@@ -277,7 +277,7 @@ end
 
 function TextureRender:drawWithAnimation(context, inTex, outTex, texMat)
     context:bindFBO(outTex)
-    context:setViewport(0, 0, outTex.width, outTex.height)
+    context:setViewport(PixelSize.new(outTex.width, outTex.height, outTex.pixelScale))
 
     self.animatePass:use()
     self.animatePass:setUniformTexture("uTexture0", 0, inTex.textureID, TEXTURE_2D)

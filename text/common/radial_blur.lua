@@ -169,7 +169,7 @@ function RadialBlurRender:draw(context, inTex, outTex)
     end
 
     context:bindFBO(outTex)
-    context:setViewport(0, 0, width, height)
+    context:setViewport(PixelSize.new(width, height, outTex.pixelScale))
     pass:use()
     pass:setUniformTexture("uTexture0", 0, inTex.textureID, GL_TEXTURE_2D)
     -- pass:setUniform1f("iTime", self._time)

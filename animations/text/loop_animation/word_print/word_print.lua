@@ -222,7 +222,7 @@ function WordPrint:applyEffect(label, srcTex, dstTex)
     local mvpMat = Matrix4f:ScaleMat(1.0, 1.0, 1.0)
 
     label.context:bindFBO(dstTex)
-    label.context:setViewport(0, 0, dstTex.width, dstTex.height)
+    label.context:setViewport(PixelSize.new(dstTex.width, dstTex.height, dstTex.pixelScale))
     label.context:setBlend(true)
     label.context:setBlendMode(RS_BlendFunc_ONE, RS_BlendFunc_INV_SRC_ALPHA)
     self.wavePass:use()

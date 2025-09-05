@@ -138,6 +138,8 @@ function LabelPro:_init()
     self.debug = false
     self.dirty = true
     self.autoAlignment = false
+
+    self.pixelScale = 1.0
 end
 
 function LabelPro:initParams(context, filter)
@@ -779,12 +781,12 @@ function LabelPro:genTextShadowTexture(context, lineInfo)
     
     local width = textWidth
     local height = textHeight
-    self.textTextureShadow = self.context:getTexture(textWidth, textHeight)
+    self.textTextureShadow = self.context:getTexture(PixelSize.new(textWidth, textHeight, self.pixelScale))
 
     -- render text at center
     local shadowTextureOF = self.textTextureShadow:toOFTexture()
     self.context:bindFBO(shadowTextureOF)
-    self.context:setViewport(0, 0, width, height)
+    self.context:setViewport(PixelSize.new(width, height, self.pixelScale))
     self.context:setBlend(false)
     self.context:setClearColor(0.0, 0.0, 0.0, 0.0)
     self.context:clearColorBuffer()
@@ -798,7 +800,7 @@ function LabelPro:genTextShadowTexture(context, lineInfo)
 
     self.renderText(self, context, shadowTextureOF, mat, true)
 
-    local blurTex = self.context:getTexture(width, height)
+    local blurTex = self.context:getTexture(PixelSize.new(width, height, self.pixelScale))
     bmpBlurRender:draw(self.context, shadowTextureOF, blurTex:toOFTexture())
     self.context:copyTexture(blurTex:toOFTexture(), shadowTextureOF)
     self.context:releaseTexture(blurTex)
@@ -807,7 +809,7 @@ end
 function LabelPro:renderTextShadow(context, outTex, shadowMat, alphaScale)
     if self.distanceFieldEnabled then
         context:bindFBO(outTex)
-        context:setViewport(0, 0, outTex.width, outTex.height)
+        context:setViewport(PixelSize.new(outTex.width, outTex.height, self.pixelScale))
         context:setBlend(true)
         context:setBlendMode(RS_BlendFunc_ONE, RS_BlendFunc_INV_SRC_ALPHA)
 
@@ -839,7 +841,7 @@ function LabelPro:renderTextShadow(context, outTex, shadowMat, alphaScale)
         self.genTextShadowTexture(self, context, self.lineInfo)
 
         context:bindFBO(outTex)
-        context:setViewport(0, 0, outTex.width, outTex.height)
+        context:setViewport(PixelSize.new(outTex.width, outTex.height, self.pixelScale))
         context:setBlend(true)
         context:setBlendMode(RS_BlendFunc_SRC_ALPHA, RS_BlendFunc_INV_SRC_ALPHA)
         -- context:copyTexture(self.textTextureShadow:toOFTexture(), outTex)
@@ -854,7 +856,7 @@ end
 
 function LabelPro:renderTextMask(context, outTex, maskMat)
     context:bindFBO(outTex)
-    context:setViewport(0, 0, outTex.width, outTex.height)
+    context:setViewport(PixelSize.new(outTex.width, outTex.height, self.pixelScale))
     context:setBlend(true)
     if self.distanceFieldEnabled then
         context:setBlendMode(RS_BlendFunc_ONE, RS_BlendFunc_INV_SRC_ALPHA)
@@ -908,7 +910,7 @@ end
 
 function LabelPro:renderText(context, outTex, mat, isShadow)
     context:bindFBO(outTex)
-    context:setViewport(0, 0, outTex.width, outTex.height)
+    context:setViewport(PixelSize.new(outTex.width, outTex.height, self.pixelScale))
     context:setBlend(true)
 
     if self.distanceFieldEnabled then  
@@ -1016,9 +1018,9 @@ function LabelPro:renderTextThroughRT(context, outTex)
         textWidth, textHeight = textWidth * 2, textHeight * 2
     end
 
-    local textTex = context:getTexture(textWidth, textHeight)
+    local textTex = context:getTexture(PixelSize.new(textWidth, textHeight, self.pixelScale))
     context:bindFBO(textTex:toOFTexture())
-    context:setViewport(0, 0, textTex:width(), textTex:height())
+    context:setViewport(PixelSize.new(textTex:width(), textTex:height(), self.pixelScale))
     context:setClearColor(0.0, 0.0, 0.0, 0.0)
     context:clearColorBuffer()
     
@@ -1059,11 +1061,11 @@ function LabelPro:renderTextThroughRT(context, outTex)
                 
     self.renderText(self, context, textTex:toOFTexture(), mvpMat, false)
 
-    local textTexTemp = context:getTexture(textWidth, textHeight)
+    local textTexTemp = context:getTexture(PixelSize.new(textWidth, textHeight, self.pixelScale))
     self.animation:applyEffect(self, textTex:toOFTexture(), textTexTemp:toOFTexture())
 
     context:bindFBO(outTex)
-    context:setViewport(0, 0, outTex.width, outTex.height)
+    context:setViewport(PixelSize.new(outTex.width, outTex.height, self.pixelScale))
     context:setBlend(true)
     context:setBlendModeSeparate(RS_BlendFunc_ONE, RS_BlendFunc_INV_SRC_ALPHA, RS_BlendFunc_ZERO, RS_BlendFunc_ONE)
     
@@ -1089,9 +1091,9 @@ function LabelPro:renderTextThroughRT(context, outTex)
 end
 
 function LabelPro:renderTextMaskToScreen(context, inTex, outTex)
-    local textTex = context:getTexture(outTex.width, outTex.height)
+    local textTex = context:getTexture(PixelSize.new(outTex.width, outTex.height, self.pixelScale))
     context:bindFBO(textTex:toOFTexture())
-    context:setViewport(0, 0, textTex:width(), textTex:height())
+    context:setViewport(PixelSize.new(textTex:width(), textTex:height(), self.pixelScale))
     context:setClearColor(0.0, 0.0, 0.0, 0.0)
     context:clearColorBuffer()
     
@@ -1116,7 +1118,7 @@ function LabelPro:renderTextToScreen(context, outTex)
         * textTransMat * self.anchor.transMat * textRotMat * self.anchor.scaleMat
 
     context:bindFBO(outTex)
-    context:setViewport(0, 0, frameWidth, frameHeight)
+    context:setViewport(PixelSize.new(frameWidth, frameHeight, self.pixelScale))
     context:setBlend(true)
     context:setBlendModeSeparate(RS_BlendFunc_SRC_ALPHA, RS_BlendFunc_INV_SRC_ALPHA, RS_BlendFunc_ZERO, RS_BlendFunc_ONE)
     
@@ -1152,7 +1154,7 @@ function LabelPro:renderDebugTex(context, inTex, debugTex)
     local frameWidth, frameHeight = debugTex.width, debugTex.height
     context:copyTexture(inTex, debugTex)
     context:bindFBO(debugTex)
-    context:setViewport(0, 0, frameWidth, frameHeight)
+    context:setViewport(PixelSize.new(frameWidth, frameHeight, self.pixelScale))
     context:setBlend(true)
     context:setBlendMode(RS_BlendFunc_SRC_ALPHA, RS_BlendFunc_INV_SRC_ALPHA)
 
@@ -1265,7 +1267,7 @@ function LabelPro:apply(context, inTex, outTex, debugTex)
     --         * Matrix4f:ScaleMat(cw / 2, ch  / 2, 1.0)
     --     self.renderColorRect(self, context, outTex, mat, { 255, 0, 0, 255 })
     -- end
-    
+    self.pixelScale = outTex.pixelScale
     if self.animation ~= nil and self.animation.renderToRT == true then
         self.renderTextThroughRT(self, context, outTex)
     elseif MaskRender.maskEnable == true then

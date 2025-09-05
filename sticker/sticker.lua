@@ -267,7 +267,7 @@ function Filter:applyRGBA(context, filter, frameData, inTex, outTex, debugTex)
 	end
 
 	context:bindFBO(outTex)
-	context:setViewport(0, 0, width, height)
+	context:setViewport(PixelSize.new(width, height, outTex.pixelScale))
 	context:setBlend(true)
 	context:setBlendModeSeparate(RS_BlendFunc_SRC_ALPHA, RS_BlendFunc_INV_SRC_ALPHA, RS_BlendFunc_ONE, RS_BlendFunc_INV_SRC_ALPHA)
 
